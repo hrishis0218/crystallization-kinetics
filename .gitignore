@@ -1,0 +1,20 @@
+# Byte-compiled / optimized files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# IDE and editor settings
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Reference PDFs (keep refs directory, ignore binary PDFs)
+refs/*.pdf
+
+# Output figures (can be committed or ignored, but ignore temporary files)
+outputs/*.tmp
+
+# OS generated files
+.DS_Store
+Thumbs.db
