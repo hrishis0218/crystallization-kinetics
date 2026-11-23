@@ -145,3 +145,49 @@ SIM_2D_TIME_STEPS = 120         # Time discretization steps
 SIM_2D_TOTAL_TIME_S = 3600.0    # 1 hour simulation window
 SIM_2D_NUCLEATION_RATE = 2.5e8  # Nucleation rate [nuclei / (m^2 * s)]
 SIM_2D_GROWTH_VELOCITY = 1.2e-9 # Radial crystal growth rate [m/s]
+
+
+# ==============================================================================
+# 6. Soda-Lime Glass Multi-Ion Poling Parameters (Pervan et al., Tables 2 & 3)
+# ==============================================================================
+# Menzel microscope slide glass composition in atomic percent (at%)
+GLASS_MENZEL_COMPOSITION_AT_PCT = {
+    "Na": 9.5,
+    "K": 0.5,
+    "Ca": 2.4,
+    "Mg": 2.2,
+    "H": 0.0,  # 0 at% in bulk, injected at anode interface during poling
+    "Si": 24.7,
+    "O": 60.0,
+    "Al": 0.6,
+}
+
+# Mobile ionic species valences q_i
+GLASS_ION_VALENCES = {
+    "Na": 1,
+    "K": 1,
+    "Ca": 2,
+    "Mg": 2,
+    "H": 1,
+}
+
+# Effective ionic mobilities mu_i [m^2 / (V s)] at 300 °C from Pervan et al. Table 3
+GLASS_MOBILITIES_300C = {
+    "Na": 5.4e-15,  # Fastest alkali cation (reference species i=1)
+    "K": 2.0e-15,   # Alkali cation
+    "Ca": 9.0e-20,  # Alkaline earth cation
+    "Mg": 3.0e-20,  # Alkaline earth cation
+    "H": 2.0e-20,   # Injected proton / hydronium ion
+}
+
+# Physical and poling parameters
+GLASS_THICKNESS_W = 1.0e-3        # Physical glass substrate thickness [m] (1 mm)
+GLASS_STATIC_EPS_R = 7.0          # Static dielectric constant of soda-lime glass
+GLASS_HAVEN_RATIO = 0.3           # Haven ratio H ~ 0.3 (Fitzgerald / Pervan et al.)
+GLASS_DENSITY_G_CM3 = 2.50        # Soda-lime glass density [g/cm^3]
+GLASS_AVG_MOLAR_MASS = 20.575     # Average molar mass per glass atom [g/mol]
+POLING_VOLTAGE_U = 500.0          # Applied poling voltage [V]
+POLING_TEMPERATURE_C = 300.0      # Poling temperature [°C]
+POLING_TEMPERATURE_K = 573.15     # Poling temperature [K]
+POLING_DURATION_S = 7200.0        # Total poling duration [s] (2 hours)
+
