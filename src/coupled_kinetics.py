@@ -42,6 +42,7 @@ try:
         POLING_EXPERIMENTS,
         GLASS_THICKNESS_W,
         POLING_VOLTAGE_U,
+        safe_savefig,
     )
 except ImportError:
     from params import (
@@ -52,6 +53,7 @@ except ImportError:
         POLING_EXPERIMENTS,
         GLASS_THICKNESS_W,
         POLING_VOLTAGE_U,
+        safe_savefig,
     )
 
 
@@ -399,7 +401,7 @@ class CoupledJMAKSolver:
         ax_jmak.grid(True, linestyle="--", alpha=0.6)
 
         plt.tight_layout()
-        fig.savefig(save_path, dpi=300)
+        safe_savefig(fig, save_path, dpi=300)
         plt.close(fig)
         print(f"[OK] Saved Plot 9 to: {save_path}")
 
@@ -496,6 +498,6 @@ class CoupledJMAKSolver:
         ax.grid(True, linestyle="--", alpha=0.6)
 
         plt.tight_layout()
-        fig.savefig(save_path, dpi=300)
+        safe_savefig(fig, save_path, dpi=300)
         plt.close(fig)
         print(f"[OK] Saved Plot 10 to: {save_path}")

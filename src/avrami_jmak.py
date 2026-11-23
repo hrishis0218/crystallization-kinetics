@@ -28,6 +28,7 @@ from src.params import (
     U_DEPLETION_THRESHOLD_V,
     BETA_PF_EFFECTIVE,
     ALPHA_LINEAR,
+    safe_savefig,
 )
 
 
@@ -250,7 +251,7 @@ def plot_wooding_scurves(save_path="outputs/plot1_wooding_scurves.png"):
     plt.suptitle("Validation against Wooding et al. (2023) Fig. 4: Isothermal JMAK S-Curves",
                  fontsize=14, fontweight="bold", y=1.03)
     plt.tight_layout()
-    plt.savefig(save_path, dpi=300, bbox_inches="tight")
+    safe_savefig(plt, save_path, dpi=300, bbox_inches="tight")
     plt.close()
     print(f"[OK] Saved Wooding S-curves plot to: {save_path}")
 
@@ -310,7 +311,7 @@ def plot_wooding_ttt(save_path="outputs/plot2_wooding_ttt.png"):
     plt.suptitle("Validation against Wooding et al. (2023) Fig. 9: TTT Diagrams for Plate-like Anatase",
                  fontsize=14, fontweight="bold", y=1.03)
     plt.tight_layout()
-    plt.savefig(save_path, dpi=300, bbox_inches="tight")
+    safe_savefig(plt, save_path, dpi=300, bbox_inches="tight")
     plt.close()
     print(f"[OK] Saved Wooding TTT diagrams to: {save_path}")
 
@@ -415,7 +416,7 @@ def plot_field_assisted_kinetics(save_path="outputs/plot3_field_assisted_kinetic
     plt.suptitle("Field-Assisted Crystallization Kinetics (Report & Barrier Reduction Models)",
                  fontsize=14, fontweight="bold", y=1.03)
     plt.tight_layout()
-    plt.savefig(save_path, dpi=300, bbox_inches="tight")
+    safe_savefig(plt, save_path, dpi=300, bbox_inches="tight")
     plt.close()
     print(f"[OK] Saved field-assisted kinetics plot to: {save_path}")
 
@@ -507,6 +508,6 @@ def plot_crystallization_regime_map(save_path="outputs/plot4_crystallization_reg
     ax.grid(True, ls=":", alpha=0.4, color="gray")
 
     plt.tight_layout()
-    plt.savefig(save_path, dpi=300, bbox_inches="tight")
+    safe_savefig(plt, save_path, dpi=300, bbox_inches="tight")
     plt.close()
     print(f"[OK] Saved crystallization regime map to: {save_path}")

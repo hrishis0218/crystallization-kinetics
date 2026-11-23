@@ -21,6 +21,7 @@ from src.params import (
     SIM_2D_TOTAL_TIME_S,
     SIM_2D_NUCLEATION_RATE,
     SIM_2D_GROWTH_VELOCITY,
+    safe_savefig,
 )
 
 
@@ -274,7 +275,7 @@ def plot_avrami_2d_snapshots(sim, save_path="outputs/plot5_avrami_2d_snapshots.p
                  f"Domain: {sim.L*1e6:.0f}x{sim.L*1e6:.0f} $\\mu$m$^2$, Grid: {sim.Nx}x{sim.Ny}, Total Grains: {n_grains}",
                  fontsize=13, fontweight="bold", y=1.05)
     plt.tight_layout()
-    plt.savefig(save_path, dpi=300, bbox_inches="tight")
+    safe_savefig(plt, save_path, dpi=300, bbox_inches="tight")
     plt.close()
     print(f"[OK] Saved 2D grain evolution snapshots to: {save_path}")
 
@@ -330,6 +331,6 @@ def plot_avrami_2d_verification(sim, save_path="outputs/plot6_avrami_2d_verifica
                  f"RMSE = {rmse:.4f} | Avrami Exponent Verified: n = {n_fit:.2f} (Theory = 3.00)",
                  fontsize=13, fontweight="bold", y=1.03)
     plt.tight_layout()
-    plt.savefig(save_path, dpi=300, bbox_inches="tight")
+    safe_savefig(plt, save_path, dpi=300, bbox_inches="tight")
     plt.close()
     print(f"[OK] Saved 2D JMAK verification plot to: {save_path}")

@@ -33,6 +33,7 @@ if current_dir not in sys.path:
     sys.path.insert(0, current_dir)
 
 from src.ion_poling_1d import SodaLimePoling1DSolver
+from src.params import safe_savefig
 
 # Create outputs directory if needed
 OUTPUT_DIR = os.path.join(current_dir, "outputs")
@@ -201,7 +202,7 @@ def run_stage2_simulations():
 
     plt.tight_layout()
     plot7_path = os.path.join(OUTPUT_DIR, "plot7_sl_ion_profiles.png")
-    fig.savefig(plot7_path, dpi=300)
+    safe_savefig(fig, plot7_path, dpi=300)
     plt.close(fig)
     print(f"Saved: {plot7_path}")
 
@@ -292,7 +293,7 @@ def run_stage2_simulations():
 
     plt.tight_layout()
     plot8_path = os.path.join(OUTPUT_DIR, "plot8_electric_field_evolution.png")
-    fig.savefig(plot8_path, dpi=300)
+    safe_savefig(fig, plot8_path, dpi=300)
     plt.close(fig)
     print(f"Saved: {plot8_path}")
 

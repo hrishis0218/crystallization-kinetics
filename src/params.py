@@ -191,3 +191,22 @@ POLING_TEMPERATURE_C = 300.0      # Poling temperature [°C]
 POLING_TEMPERATURE_K = 573.15     # Poling temperature [K]
 POLING_DURATION_S = 7200.0        # Total poling duration [s] (2 hours)
 
+
+# ==============================================================================
+# 7. Robust Figure Saving Helper (Windows File Lock Tolerant)
+# ==============================================================================
+def safe_savefig(fig_or_plt, save_path, **kwargs):
+    """
+    Safely save a matplotlib figure, retrying if transient Windows file locks
+    (such as indexer, thumbnail generator, or antivirus) occur.
+    """
+    import time
+    for attempt in range(5):
+        try:
+            fig_or_plt.savefig(save_path, **kwargs)
+            return
+        except OSError:
+            time.sleep(0.3)
+    fig_or_plt.savefig(save_path, **kwargs)
+
+
