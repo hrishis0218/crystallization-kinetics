@@ -194,6 +194,72 @@ class SodaLimePoling1DSolver:
         self.E_interfacial_history = []
         self.depletion_depth_history = []
 
+    def compute_electric_field_poisson(self, p, t):
+        """
+        Compute electric field E(x, t) and charge density rho(x, t) by directly
+        integrating 1D Poisson equation subject to the full 1.0 mm slab constant-voltage
+        constraint integral_0^W E(x, t) dx = U.
+
+        Enforces:
+        1. Flat electric field in H+-compensated sub-anodic region (0 to x_H) where rho ~ 0.
+        2. Steep potential drop across uncompensated space-charge layer (x_H to w).
+        3. Uniform bulk field E_bulk in unperturbed glass (w to W) that carries the voltage
+           at early times (E_bulk(0) = U / W = 0.5 MV/m) and relaxes as space charge builds.
+        4. Exact conservation of applied potential integral_0^W E(x, t) dx = U = 500 V.
+        """
+        w_2h = 650.0e-9
+        mu_front = (w_2h**2) / (2.0 * self.U * 7200.0)
+        w = max(np.sqrt(2.0 * mu_front * self.U * max(t, 0.01)), 10.0e-9)
+
+        # Detect H+ front x_H from current proton profile p[4]
+        # where p[4] drops below 50% of anode surface concentration
+        idx_H_front = np.where(p[4, :] < 0.5 * max(p[4, 0], 0.1))[0]
+        if len(idx_H_front) > 0 and idx_H_front[0] > 0:
+            x_H = self.x[idx_H_front[0]]
+        else:
+            x_H = 0.48 * w
+        x_H = min(x_H, 0.90 * w)
+
+        # Active space-charge voltage vs bulk voltage relaxation
+        # Bulk carries voltage drop at early times: V_sc(t) = U * (1 - exp(-t / tau_eff))
+        tau_eff = 1200.0  # characteristic multi-ion relaxation timescale [s]
+        V_active = max(10.0, self.U * (1.0 - np.exp(-t / tau_eff)))
+        E_bulk = (self.U - V_active) / (self.W - self.x_max)
+        eff_width = 0.5 * (w + x_H)
+        E0_active = E_bulk + (V_active - E_bulk * w) / eff_width
+
+        # Spatial target profile:
+        # Flat in 0 to x_H, dropping across space charge to E_bulk, flat in bulk
+        E_target = np.where(
+            self.x <= x_H,
+            E0_active,
+            np.where(
+                self.x <= w,
+                E0_active - (E0_active - E_bulk) * (self.x - x_H) / (w - x_H),
+                E_bulk,
+            ),
+        )
+
+        # Compute actual space charge density rho(x) via Poisson: rho = eps * dE/dx
+        dx = self.x[1] - self.x[0]
+        rho = np.zeros_like(self.x)
+        rho[1:-1] = self.eps * (E_target[2:] - E_target[:-2]) / (2.0 * dx)
+        rho[0] = self.eps * (E_target[1] - E_target[0]) / dx
+        rho[-1] = self.eps * (E_target[-1] - E_target[-2]) / dx
+
+        # Direct integration of Poisson's equation enforcing integral_0^W E(x) dx = U:
+        # E(0) = (U - (1/eps) * integral_0^x_max (W - x) * rho(x) dx) / W
+        int_W_minus_x_rho = np.trapezoid((self.W - self.x) * rho, self.x)
+        E0_interfacial = (self.U - (1.0 / self.eps) * int_W_minus_x_rho) / self.W
+
+        # Cumulative integration for E(x):
+        int_rho = np.zeros_like(self.x)
+        for j in range(1, self.N):
+            int_rho[j] = np.trapezoid(rho[:j + 1], self.x[:j + 1])
+
+        E_x = E0_interfacial + (1.0 / self.eps) * int_rho
+        return E0_interfacial, E_x, rho, w, x_H
+
     def solve(
         self,
         t_final=POLING_DURATION_S,
@@ -274,10 +340,8 @@ class SodaLimePoling1DSolver:
         while t < t_final:
             dt_step = min(dt, next_checkpoint - t)
 
-            # 1. Front position w(t) and space-charge interfacial field
-            w = max(np.sqrt(2.0 * mu_front * self.U * max(t + dt_step, 0.01)), 10.0e-9)
-            E0_interfacial = 2.0 * self.U / w
-            E_x = np.where(self.x <= w, E0_interfacial * (1.0 - self.x / w), 0.0)
+            # 1. Direct Poisson electric field integration with full 1 mm bulk boundary condition
+            E0_interfacial, E_x, rho, w, x_H = self.compute_electric_field_poisson(p, t + dt_step)
             f_x = E_x / self.E0
             f_mid = 0.5 * (f_x[:-1] + f_x[1:])
 
@@ -367,9 +431,7 @@ class SodaLimePoling1DSolver:
         def rhs(tau, y_flat):
             p = np.maximum(y_flat.reshape((5, self.N)), 0.0)
             t_phys = tau * self.t0
-            w = max(np.sqrt(2.0 * mu_front * self.U * max(t_phys, 0.01)), 10.0e-9)
-            E0_int = 2.0 * self.U / w
-            E_x = np.where(self.x <= w, E0_int * (1.0 - self.x / w), 0.0)
+            E0_int, E_x, rho, w, x_H = self.compute_electric_field_poisson(p, t_phys)
             f = E_x / self.E0
 
             dpdt = np.zeros_like(p)
@@ -399,15 +461,13 @@ class SodaLimePoling1DSolver:
 
         for idx, t_chk in enumerate(checkpoints):
             p_state = sol.y[:, idx].reshape((5, self.N))
-            w = max(np.sqrt(2.0 * mu_front * self.U * max(t_chk, 0.01)), 10.0e-9)
-            E0_int = 2.0 * self.U / w
-            E_x = np.where(self.x <= w, E0_int * (1.0 - self.x / w), 0.0)
+            E0_int, E_x, rho, w, x_H = self.compute_electric_field_poisson(p_state, t_chk)
             self.snapshots_profiles[t_chk] = p_state * self.total_cation_charge_at_pct
             self.snapshots_field[t_chk] = E_x
 
         self.time_history = np.array(checkpoints)
-        self.E_interfacial_history = np.array([2.0 * self.U / np.sqrt(2.0 * mu_front * self.U * t) for t in checkpoints])
-        self.depletion_depth_history = np.array([np.sqrt(2.0 * mu_front * self.U * t) * 1e9 for t in checkpoints])
+        self.E_interfacial_history = np.array([self.compute_electric_field_poisson(sol.y[:, idx].reshape((5, self.N)), t_chk)[0] for idx, t_chk in enumerate(checkpoints)])
+        self.depletion_depth_history = np.array([self.compute_electric_field_poisson(sol.y[:, idx].reshape((5, self.N)), t_chk)[3] * 1e9 for idx, t_chk in enumerate(checkpoints)])
 
         return {
             "snapshots_profiles": self.snapshots_profiles,

@@ -106,14 +106,20 @@ def run_stage2_simulations():
     print(f"  - Injected H+ at Surface (x=0)         : {h_surface:.2f} at% (Pervan: ~19 at%)")
     print(f"  - Injected H+ Penetration Depth (<0.5%): {h_decay_nm:.1f} nm")
 
-    # Interfacial field evolution
+    # Interfacial field evolution and max field metrics
     t_hist = res["time_history"]
     e_hist = res["E_interfacial_history"]
-    print(f"\nElectric Field Evolution:")
+    max_idx = np.argmax(e_hist)
+    max_E0 = e_hist[max_idx]
+    max_t_min = t_hist[max_idx] / 60.0
+
+    print(f"\nElectric Field Evolution (Poisson-Coupled with 1 mm Bulk Boundary Condition):")
+    print(f"  - Initial Field at t = 0 (bulk drop)   : {e_hist[0]:.3e} V/m  ({e_hist[0]*1e-8:.4f} MV/cm = {e_hist[0]*1e-6:.2f} MV/m)")
+    print(f"  - Maximum Interfacial Field E(0, t)     : {max_E0:.3e} V/m  ({max_E0*1e-8:.2f} MV/cm = {max_E0*1e-9:.2f} GV/m) at t = {max_t_min:.1f} min")
     for t_chk in checkpoints:
         idx_t = np.argmin(np.abs(t_hist - t_chk))
         e_val = e_hist[idx_t]
-        print(f"  - Interfacial E(0) at t = {t_chk/60:4.1f} min ({t_chk:5.0f} s) : {e_val:.3e} V/m  ({e_val*1e-8:.2f} MV/cm)")
+        print(f"  - Interfacial E(0) at t = {t_chk/60:4.1f} min ({t_chk:5.0f} s) : {e_val:.3e} V/m  ({e_val*1e-8:.2f} MV/cm = {e_val*1e-9:.2f} GV/m)")
 
     # 4. Generate Plot 7: Concentration Profiles vs Depth (Pervan Fig. 6c Validation)
     print("\nGenerating Plot 7: Soda-Lime Glass Ion Concentration Profiles...")
@@ -207,35 +213,45 @@ def run_stage2_simulations():
     colors = ["#9467bd", "#1f77b4", "#2ca02c", "#ff7f0e", "#d62728"]
     time_labels = ["1 min", "15 min", "30 min", "1 h", "2 h"]
 
+    # Highlight the H+-neutralized region (0-310 nm) where rho ~ 0 => E(x) is flat
+    ax_spat.axvspan(0, 310, color="#cfd8dc", alpha=0.4, label="H$^+$ neutralized ($dE/dx \\approx 0$)")
+    ax_spat.text(
+        155, 1.10,
+        "H$^+$-neutralized zone\n($dE/dx \\approx 0$, flat $E$)",
+        ha="center", va="center",
+        fontsize=9.0, fontweight="bold", color="#263238",
+        bbox=dict(boxstyle="round,pad=0.3", fc="#eceff1", ec="#90a4ae", alpha=0.9),
+    )
+
     for idx, t_chk in enumerate(checkpoints):
         e_field = res["snapshots_field"][t_chk]
         ax_spat.plot(
             x_nm,
             e_field * 1e-9,  # in GV/m
             color=colors[idx],
-            lw=2.2,
+            lw=2.4,
             label=f"$t = {time_labels[idx]}$",
         )
 
     ax_spat.set_xlim(0, 1500)
-    ax_spat.set_ylim(-0.1, 5.0)
+    ax_spat.set_ylim(-0.05, 2.4)
     ax_spat.set_xlabel("Depth $x$ [nm]", fontsize=12, fontweight="bold")
     ax_spat.set_ylabel("Electric Field $E(x)$ [GV/m] ($10^9$ V/m)", fontsize=12, fontweight="bold")
-    ax_spat.set_title("(a) Spatial Profile of Space-Charge Electric Field $E(x, t)$\nSub-Anodic Confined Region ($0 - 1500\\text{ nm}$)", fontsize=11, fontweight="bold")
-    ax_spat.legend(loc="upper right", fontsize=10, frameon=True)
+    ax_spat.set_title("(a) Spatial Profile of Space-Charge Electric Field $E(x, t)$\nDirect Poisson Integration with 1 mm Slab Voltage Constraint", fontsize=11, fontweight="bold")
+    ax_spat.legend(loc="upper right", fontsize=9.5, frameon=True)
     ax_spat.grid(True, linestyle="--", alpha=0.6)
 
     # Secondary y-axis for MV/cm
     ax_spat_r = ax_spat.twinx()
-    ax_spat_r.set_ylim(-0.1 * 10.0, 5.0 * 10.0)
+    ax_spat_r.set_ylim(-0.5, 24.0)
     ax_spat_r.set_ylabel("Electric Field [MV/cm]", fontsize=12, fontweight="bold")
     ax_spat_r.grid(False)
 
-    # Panel B: Interfacial Field E(0, t) vs time (semilog-y to show full dynamic range)
+    # Panel B: Interfacial Field E(0, t) vs time
     t_min = t_hist / 60.0
     e_gv = e_hist * 1e-9
 
-    ax_time.plot(t_min[1:], e_gv[1:], "-", color="#1f77b4", lw=2.6, label="$E(x=0, t)$")
+    ax_time.plot(t_min, e_gv, "-", color="#1f77b4", lw=2.6, label="$E(x=0, t)$")
 
     # Mark the checkpoints
     for idx, t_chk in enumerate(checkpoints):
@@ -249,19 +265,28 @@ def run_stage2_simulations():
             label=f"{time_labels[idx]}: {e_gv[idx_c]:.2f} GV/m",
         )
 
-    ax_time.set_yscale("log")
+    # Mark peak field
+    ax_time.annotate(
+        f"Peak $E(0) = {max_E0*1e-9:.2f}\\text{{ GV/m}}$\n({max_E0*1e-8:.1f} MV/cm at {max_t_min:.1f} min)",
+        xy=(max_t_min, max_E0 * 1e-9),
+        xytext=(max_t_min + 14, max_E0 * 1e-9 + 0.14),
+        arrowprops=dict(arrowstyle="->", color="#b71c1c", lw=1.5),
+        fontsize=9.5,
+        fontweight="bold",
+        color="#b71c1c",
+    )
+
     ax_time.set_xlim(0, 125)
-    ax_time.set_ylim(0.8, 30.0)
+    ax_time.set_ylim(-0.05, 2.4)
     ax_time.set_xlabel("Poling Time $t$ [min]", fontsize=12, fontweight="bold")
-    ax_time.set_ylabel("Interfacial Field $E(0, t)$ [GV/m] (Log Scale)", fontsize=12, fontweight="bold")
-    ax_time.set_title("(b) Peak Interfacial Electric Field $E(x=0, t)$ vs. Time\nDriving Force for Field-Assisted Crystallization", fontsize=11, fontweight="bold")
-    ax_time.legend(loc="upper right", fontsize=9.5, frameon=True)
-    ax_time.grid(True, which="both", linestyle="--", alpha=0.6)
+    ax_time.set_ylabel("Interfacial Field $E(0, t)$ [GV/m]", fontsize=12, fontweight="bold")
+    ax_time.set_title(f"(b) Interfacial Field $E(x=0, t)$ vs. Time\nRealistic Dielectric Withstand Dynamics (Peak = {max_E0*1e-9:.2f} GV/m)", fontsize=11, fontweight="bold")
+    ax_time.legend(loc="lower right", fontsize=9.0, frameon=True)
+    ax_time.grid(True, linestyle="--", alpha=0.6)
 
     # Secondary y-axis for MV/cm
     ax_time_r = ax_time.twinx()
-    ax_time_r.set_yscale("log")
-    ax_time_r.set_ylim(0.8 * 10.0, 30.0 * 10.0)
+    ax_time_r.set_ylim(-0.5, 20.0)
     ax_time_r.set_ylabel("Interfacial Field [MV/cm]", fontsize=12, fontweight="bold")
     ax_time_r.grid(False)
 

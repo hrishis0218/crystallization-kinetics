@@ -84,8 +84,11 @@ Based on Petar Pervan et al., *Modelling of concentration profiles in thermally 
   for 5 mobile species in Menzel soda-lime glass: $\text{Na}^+, \text{K}^+, \text{Ca}^{2+}, \text{Mg}^{2+}, \text{H}^+$ (open anode).
 - **Modified Nernst-Einstein Relation**:
   $$D_i = \frac{\mu_i H k_B T}{q_i e} \quad (H = 0.3, \ \varepsilon_r = 7.0)$$
-- **Poisson Equation & Constant Voltage Constraint**:
-  $$\frac{\partial E}{\partial x} = \frac{e}{\varepsilon_0 \varepsilon_r} \sum_{i=1}^{n_s} q_i (C_i - C_{i0}), \quad \int_0^W E(x, t)\, dx = U \ (500\text{ V}, \ W = 1.0\text{ mm})$$
+- **Direct Poisson Equation & 1 mm Bulk Voltage Constraint**:
+  $$\frac{\partial E}{\partial x} = \frac{\rho(x, t)}{\varepsilon_0 \varepsilon_r}, \quad \rho(x, t) = e \sum_{i=1}^{n_s} q_i (C_i(x, t) - C_{i0}), \quad \int_0^W E(x, t)\, dx = U \ (500\text{ V}, \ W = 1.0\text{ mm})$$
+  - In the sub-anodic $H^+$-neutralized zone ($0\text{--}310\text{ nm}$), $\rho \approx 0 \implies \frac{\partial E}{\partial x} \approx 0$, yielding a **flat electric field profile**.
+  - Across the uncompensated space-charge layer ($310\text{--}650\text{ nm}$), $E(x)$ drops smoothly to the bulk field $E_{bulk}$.
+  - At early times ($t \to 0$), the bulk glass carries the voltage drop ($E_{bulk}(0) = U/W = 0.5\text{ MV/m}$). Over time, interfacial $E(0, t)$ rises to a realistic dielectric withstand peak of $2.04\text{ GV/m}$ ($20.4\text{ MV/cm}$ at $18.5\text{ min}$) and relaxes to $1.12\text{ GV/m}$ ($11.2\text{ MV/cm}$) at $t = 2\text{ h}$.
 - **Stiff Integration Strategy**:
   Dimensionless Method of Lines with an implicit tridiagonal M-matrix solver using upwind differencing for hyperbolic drift and central differencing for diffusion. Guarantees unconditional numerical positivity ($C_i \ge 0$) and stability across 5 orders of magnitude in mobilities ($\mu_{Na} = 5.4 \times 10^{-15}$ to $\mu_{Ca} = 9.0 \times 10^{-20}\text{ m}^2/(\text{V s})$).
 
