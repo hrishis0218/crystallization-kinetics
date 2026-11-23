@@ -11,10 +11,11 @@ tio2 simulations/
 ├── src/
 │   ├── __init__.py
 │   ├── params.py             # Physical constants, Wooding et al. dataset, poling experimental matrix
-│   ├── avrami_jmak.py        # Analytical JMAK X(t), Arrhenius k(T), TTT diagram, field-assisted k(T, E)
-│   ├── avrami_2d.py          # 2D spatial nucleation-and-growth simulator on a grid
+│   ├── avrami_jmak.py        # Stage 1: Analytical JMAK X(t), Arrhenius k(T), TTT diagram, field-assisted k(T, E)
+│   ├── avrami_2d.py          # Stage 1: 2D spatial nucleation-and-growth simulator on a grid
 │   ├── ion_poling_1d.py      # Stage 2: 1D multi-ion drift-diffusion + Poisson solver for glass poling
-│   └── stage2_placeholder.py # Stage 2 module aliases and backwards-compatibility interface
+│   ├── stage2_placeholder.py # Stage 2 module aliases and backwards-compatibility interface
+│   └── coupled_kinetics.py   # Stage 3: Dynamic field-coupled JMAK crystallization solver
 ├── outputs/                  # High-resolution publication-quality PNG figures
 │   ├── plot1_wooding_scurves.png
 │   ├── plot2_wooding_ttt.png
@@ -22,15 +23,18 @@ tio2 simulations/
 │   ├── plot4_crystallization_regime_map.png
 │   ├── plot5_avrami_2d_snapshots.png
 │   ├── plot6_avrami_2d_verification.png
-│   ├── plot7_sl_ion_profiles.png           # Stage 2: at% profiles vs depth (Pervan Fig. 6c validation)
-│   ├── plot8_electric_field_evolution.png  # Stage 2: E(x, t) spatial profiles and E(0, t) time series
-│   └── interfacial_field_300C_500V.npz     # Stage 2: Exported interfacial field array
+│   ├── plot7_sl_ion_profiles.png              # Stage 2: at% profiles vs depth (Pervan Fig. 6c validation)
+│   ├── plot8_electric_field_evolution.png     # Stage 2: E(x, t) spatial profiles and E(0, t) time series
+│   ├── interfacial_field_300C_500V.npz        # Stage 2: Exported interfacial field array
+│   ├── plot9_coupled_avrami_vs_field.png      # Stage 3: Dynamic E(0, t) + X(t) with experimental markers
+│   └── plot10_barrier_reduction_evolution.png # Stage 3: Activation barrier E_eff(t) over time
 ├── refs/                     # Reference papers and reports
 │   ├── ALD-01-001_article-101276_en_1.pdf       (Wooding et al., ALDJ 2023)
 │   ├── Report on Tio2 crystallization.pdf       (Bordeaux & IRB experimental study)
 │   └── Modelling20accepted.pdf                  (Pervan et al., multi-ion glass poling)
 ├── run_stage1.py             # Main script to run all Stage 1 simulations and save plots
 ├── run_stage2.py             # Main script to run Stage 2 glass poling and save plots
+├── run_stage3.py             # Main script to run Stage 3 coupled kinetics and save plots
 ├── requirements.txt          # Python dependencies (numpy, scipy, matplotlib)
 ├── .gitignore                # Git exclusions (__pycache__, *.pyc, .vscode, refs/*.pdf)
 └── README.md                 # Project documentation and guide
@@ -92,6 +96,20 @@ Based on Petar Pervan et al., *Modelling of concentration profiles in thermally 
 - **Stiff Integration Strategy**:
   Dimensionless Method of Lines with an implicit tridiagonal M-matrix solver using upwind differencing for hyperbolic drift and central differencing for diffusion. Guarantees unconditional numerical positivity ($C_i \ge 0$) and stability across 5 orders of magnitude in mobilities ($\mu_{Na} = 5.4 \times 10^{-15}$ to $\mu_{Ca} = 9.0 \times 10^{-20}\text{ m}^2/(\text{V s})$).
 
+### 5. Stage 3: Dynamic Interfacial Field Coupling into Generalized JMAK Kinetics
+Couples the time-varying interfacial electric field $E(x=0, t)$ exported from Stage 2 (`interfacial_field_300C_500V.npz`) into the transformation kinetics of $\text{TiO}_2$:
+- **Generalized Dynamic JMAK Integral**:
+  $$X(t) = 1 - \exp\left( - \left[ \int_0^t k(T, E(t'))\, dt' \right]^n \right)$$
+- **Field-Assisted Rate Constant & Barrier Lowering**:
+  $$k(T, E(t)) = k_0 \exp\left( -\frac{E_a - \Delta E(E(t))}{k_B T} \right)$$
+  - Poole-Frenkel: $\Delta E_{PF}(t) = \beta_{PF} \sqrt{E(t)}$ with calibrated $\beta_{PF} = 7.00 \times 10^{-6}\text{ eV}\cdot(\text{m/V})^{1/2}$
+  - Linear: $\Delta E_{lin}(t) = \alpha_{lin} \cdot E(t)$ with calibrated $\alpha_{lin} = 1.65 \times 10^{-10}\text{ eV}/(\text{V/m})$
+- **Effective Activation Energy**:
+  $$E_{eff}(t) = E_a - \Delta E(E(t))$$
+  Drops from $1.55\text{ eV}$ down to $1.234\text{ eV}$ ($\Delta E \approx 316\text{ meV}$) at the $t = 18.5\text{ min}$ field peak ($E_{max} = 2.04\text{ GV/m}$).
+- **Space-Charge Amplification Mechanism**:
+  A static uniform field without space charge ($E_{unif} = U/W = 0.5\text{ MV/m}$) lowers the barrier by only $\sim 4.9\text{ meV}$, leaving the film amorphous ($X < 10^{-4}$). In contrast, the sub-anodic space-charge layer amplifies the local interfacial field by $\sim 4,000\times$, speeding up crystallization by $> 5$ orders of magnitude and driving complete transformation within $15\text{--}30\text{ min}$ (matching experimental samples C13 and C12).
+
 ---
 
 ## Installation & Requirements
@@ -118,10 +136,13 @@ python run_stage1.py
 
 # Run Stage 2: 1D multi-ion drift-diffusion and Poisson solver for soda-lime glass poling
 python run_stage2.py
+
+# Run Stage 3: Dynamic interfacial field coupling into generalized JMAK kinetics
+python run_stage3.py
 ```
 
 ### In Spyder or VS Code
-Open the project directory in Spyder, open either `run_stage1.py` or `run_stage2.py`, and press **Run (F5)**. All paths are relative to the project root and do not require hard-coded directories.
+Open the project directory in Spyder, open `run_stage1.py`, `run_stage2.py`, or `run_stage3.py`, and press **Run (F5)**. All paths are relative to the project root and do not require hard-coded directories.
 
 ---
 
@@ -138,4 +159,7 @@ Open the project directory in Spyder, open either `run_stage1.py` or `run_stage2
 | `plot7_sl_ion_profiles.png` | Stage 2 | Concentration profiles (at%) of $\text{Na}^+, \text{K}^+, \text{Ca}^{2+}, \text{Mg}^{2+}, \text{H}^+$ vs depth ($0\text{--}2500\text{ nm}$) at $t = 2\text{ h}$ validating $\text{Na}^+$ depletion (~600 nm) and $\text{Ca}^{2+}/\text{Mg}^{2+}$ pile-up against Pervan et al. Fig. 6c, plus $t = 1\text{ h}$ snapshot for TiO$_2$ correlation. |
 | `plot8_electric_field_evolution.png` | Stage 2 | Spatial profiles of $E(x, t)$ across multiple times ($1\text{ min}, 15\text{ min}, 30\text{ min}, 1\text{ h}, 2\text{ h}$) and peak interfacial field $E(x=0, t)$ vs time ($0\text{--}2\text{ h}$) on both linear and log scales. |
 | `interfacial_field_300C_500V.npz` | Stage 2 | Exported interfacial electric field $E(0, t)$ and depletion front $w(t)$ time-series array for Stage 1 coupling. |
+| `plot9_coupled_avrami_vs_field.png` | Stage 3 | Two-panel figure: (a) Stage 2 driving interfacial field $E(0, t)$ peaking at $2.04\text{ GV/m}$ (18.5 min), and (b) dynamic JMAK $X(t)$ curve with experimental samples C13, C12, C20, C11 overlaid vs. uniform field and thermal baselines. |
+| `plot10_barrier_reduction_evolution.png` | Stage 3 | Temporal evolution of effective activation energy $E_{eff}(t) = E_a - \Delta E(E(t))$ showing maximum barrier reduction of $316\text{ meV}$ down to $1.234\text{ eV}$ during the first 30 minutes of poling. |
+
 
